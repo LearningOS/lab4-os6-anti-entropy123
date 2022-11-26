@@ -7,8 +7,10 @@ use alloc::{
     vec::Vec,
 };
 
+use crate::fs::Stdin;
 use crate::{
     config::*,
+    fs::{File, Stdout},
     loader::get_app_elf,
     mm::{MemorySet, PhysAddr, PhysPageNum, VirtAddr, VirtPageNum},
     sync::UPSafeCell,
@@ -46,6 +48,7 @@ pub struct TaskInner {
     pub exit_code: i32,
     pub priority: u32,
     pub pass: usize,
+    pub fd_table: Vec<Option<Arc<dyn File>>>,
 }
 
 impl Default for TaskInner {
@@ -54,11 +57,17 @@ impl Default for TaskInner {
             trap_ctx_ppn: Default::default(),
             state: Default::default(),
             syscall_times: [0; MAX_SYSCALL_NUM],
-            addr_space: MemorySet::default(),
-            children: Vec::new(),
-            exit_code: 0,
+            addr_space: Default::default(),
+            children: Default::default(),
+            exit_code: Default::default(),
             priority: 16,
-            pass: 0,
+            pass: Default::default(),
+            fd_table: {
+                let mut v: Vec<Option<Arc<dyn File>>> = Vec::new();
+                v.push(Some(Arc::new(Stdin)));
+                v.push(Some(Arc::new(Stdout)));
+                v
+            },
         }
     }
 }
@@ -202,6 +211,9 @@ pub fn fork_task(parent: &Arc<Task>) -> Arc<Task> {
         child_trapctx.set_reg_a(10, 0); // fork return 0 to child.
         child_trapctx.kernel_sp = kernel_stack_top;
     }
+    // init fd_table
+    child_inner.fd_table = p_inner.fd_table.clone();
+
     drop(child_inner);
     add_task(Arc::clone(&child_task));
     child_task

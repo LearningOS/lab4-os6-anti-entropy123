@@ -34,7 +34,7 @@ mod task;
 mod timer;
 mod trap;
 mod drivers;
-// mod fs;
+mod fs;
 
 use alloc::{sync::Arc, vec::Vec};
 use lazy_static::lazy_static;
