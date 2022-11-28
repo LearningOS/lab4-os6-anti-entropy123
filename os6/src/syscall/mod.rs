@@ -20,21 +20,22 @@ use crate::{
 
 #[derive(Debug)]
 enum Syscall {
-    Exit,
+    Read,
     Write,
-    GetTimeOfDay,
+    Exit,
     Yield,
-    TaskInfo,
-    Mmap,
+    SetPriority,
+    GetTimeOfDay,
+    GetPid,
     Munmap,
     Fork,
-    WaitPid,
-    GetPid,
-    Read,
-    SetPriority,
     Exec,
+    Mmap,
+    WaitPid,
     Spawn,
+    TaskInfo,
 }
+
 impl Syscall {
     fn from(n: usize) -> Result<Syscall, ()> {
         Ok(match n {

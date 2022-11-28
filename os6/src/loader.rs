@@ -1,6 +1,8 @@
 use alloc::vec::Vec;
 use lazy_static::lazy_static;
 
+use crate::fs::ROOT_INODE;
+
 pub fn get_num_app() -> usize {
     extern "C" {
         fn _num_app();
@@ -61,6 +63,14 @@ lazy_static! {
 pub fn list_apps() {
     println!("/**** APPS ****");
     for app in APP_NAMES.iter() {
+        println!("{}", app);
+    }
+    println!("**************/");
+}
+
+pub fn list_efs_apps() {
+    println!("/**** APPS ****");
+    for app in ROOT_INODE.ls() {
         println!("{}", app);
     }
     println!("**************/");

@@ -6,8 +6,8 @@ use super::{
 };
 use crate::{
     config::{MEMORY_END, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
+    sync::UPSafeCell,
     task::PidHandle,
-    sync::UPSafeCell
 };
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use lazy_static::*;
@@ -30,6 +30,11 @@ lazy_static! {
     /// a memory set instance through lazy_static! managing kernel space
     pub static ref KERNEL_SPACE: Arc<UPSafeCell<MemorySet>> = unsafe{
         Arc::new(UPSafeCell::new(MemorySet::new_kernel())) };
+}
+
+/// Get the token of the kernel memory space
+pub fn kernel_token() -> usize {
+    KERNEL_SPACE.exclusive_access().token()
 }
 
 /// memory set structure, controls virtual-memory space

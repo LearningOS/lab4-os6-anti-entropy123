@@ -13,13 +13,13 @@ mod memory_set;
 mod page_table;
 mod user_buffer;
 
-pub use address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
-use address::{StepByOne, VPNRange};
-pub use frame_allocator::{frame_alloc, FrameTracker};
+use address::VPNRange;
+pub use address::{PhysAddr, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
+pub use frame_allocator::{frame_alloc, frame_dealloc, FrameTracker};
 pub use memory_set::remap_test;
-pub use memory_set::{MapPermission, MemorySet, KERNEL_SPACE};
-pub use page_table::PageTableEntry;
-use page_table::{PTEFlags, PageTable};
+pub use memory_set::{kernel_token, MapPermission, MemorySet, KERNEL_SPACE};
+use page_table::PTEFlags;
+pub use page_table::{PageTable, PageTableEntry};
 pub use user_buffer::UserBuffer;
 
 /// initiate heap allocator, frame allocator and kernel space
