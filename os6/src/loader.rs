@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use lazy_static::lazy_static;
 
-use crate::fs::ROOT_INODE;
+use crate::fs::{open_file, File, OpenFlags, ROOT_INODE};
 
 pub fn get_num_app() -> usize {
     extern "C" {
@@ -14,7 +14,7 @@ fn get_appid_by_name(name: &str) -> Result<usize, ()> {
     (0..get_num_app()).find(|&i| APP_NAMES[i] == name).ok_or(())
 }
 
-pub fn get_app_elf(name: &str) -> Result<&'static [u8], ()> {
+pub fn _get_app_elf(name: &str) -> Result<&'static [u8], ()> {
     extern "C" {
         fn _num_app();
     }
@@ -74,4 +74,12 @@ pub fn list_efs_apps() {
         println!("{}", app);
     }
     println!("**************/");
+}
+
+pub fn efs_get_app_elf(name: &str) -> Result<Vec<u8>, ()> {
+    let all_data = match open_file(name, OpenFlags::RDONLY) {
+        Some(app_inode) => app_inode.read_all(),
+        None => panic!("wrong app name? {}", name),
+    };
+    Ok(all_data)
 }

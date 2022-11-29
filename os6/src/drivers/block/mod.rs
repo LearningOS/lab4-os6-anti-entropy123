@@ -6,7 +6,9 @@ use lazy_static::*;
 type BlockDeviceImpl = virtio_blk::VirtIOBlock;
 
 lazy_static! {
-    pub static ref BLOCK_DEVICE: Arc<dyn BlockDevice> = Arc::new(BlockDeviceImpl::new());
+    pub static ref BLOCK_DEVICE: Arc<dyn BlockDevice> = {
+        log::info!("BLOCK_DEVICE init...");
+        Arc::new(BlockDeviceImpl::new())};
 }
 
 #[allow(unused)]

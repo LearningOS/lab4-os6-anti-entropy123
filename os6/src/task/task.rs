@@ -11,7 +11,7 @@ use crate::fs::Stdin;
 use crate::{
     config::*,
     fs::{File, Stdout},
-    loader::get_app_elf,
+    loader::efs_get_app_elf,
     mm::{MemorySet, PhysAddr, PhysPageNum, VirtAddr, VirtPageNum},
     sync::UPSafeCell,
     timer::get_time_ms,
@@ -108,7 +108,8 @@ impl Task {
             kernel_stack: alloc_kernel_stack(new_pid),
             inner: unsafe { UPSafeCell::new(TaskInner::default()) },
         };
-        let elf = get_app_elf(name).unwrap();
+        let app_elf_vec = efs_get_app_elf(name).unwrap();
+        let elf = app_elf_vec.as_slice();
         task.init(elf);
         Arc::new(task)
     }
@@ -137,7 +138,8 @@ impl Task {
             .init(user_stack, entrypoint, kernel_stack_top)
     }
     pub fn exec(&self, name: &str) -> Result<(), ()> {
-        let elf = get_app_elf(name)?;
+        let app_elf_vec = efs_get_app_elf(name)?;
+        let elf = app_elf_vec.as_slice();
         self.init(elf);
         Ok(())
     }
@@ -151,7 +153,8 @@ impl Task {
             kernel_stack: alloc_kernel_stack(new_pid),
             inner: unsafe { UPSafeCell::new(TaskInner::default()) },
         };
-        let elf = get_app_elf(name)?;
+        let app_elf_vec = efs_get_app_elf(name)?;
+        let elf = app_elf_vec.as_slice();
         task.init(elf);
         Ok(Arc::new(task))
     }

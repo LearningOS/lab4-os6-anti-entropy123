@@ -5,7 +5,7 @@ use super::{
     StepByOne, VPNRange, VirtAddr, VirtPageNum,
 };
 use crate::{
-    config::{MEMORY_END, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
+    config::{MEMORY_END, MMIO, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
     sync::UPSafeCell,
     task::PidHandle,
 };
@@ -204,6 +204,18 @@ impl MemorySet {
             ),
             None,
         );
+        println!("mapping memory-mapped registers");
+        for pair in MMIO {
+            memory_set.push(
+                MapArea::new(
+                    (*pair).0.into(),
+                    ((*pair).0 + (*pair).1).into(),
+                    MapType::Identical,
+                    MapPermission::R | MapPermission::W,
+                ),
+                None,
+            );
+        }
         memory_set
     }
     /// Include sections in elf and trampoline and TrapContext and user stack,

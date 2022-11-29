@@ -80,9 +80,9 @@ pub fn rust_main() -> ! {
     timer::set_next_trigger();
     // loader::list_apps();
     loader::list_efs_apps();
-    // task::add_initproc();
-    // info!("after initproc!");
-    run_usertest();
+    task::add_initproc();
+    info!("after initproc!");
+    // run_usertest();
     task::run_next_task()
 }
 
