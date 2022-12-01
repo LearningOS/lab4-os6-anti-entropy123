@@ -46,6 +46,7 @@ pub struct TaskInner {
     pub addr_space: MemorySet,
     pub children: Vec<Arc<Task>>,
     pub exit_code: i32,
+    pub name: String,
     pub priority: u32,
     pub pass: usize,
     pub fd_table: Vec<Option<Arc<dyn File>>>,
@@ -54,6 +55,7 @@ pub struct TaskInner {
 impl Default for TaskInner {
     fn default() -> Self {
         Self {
+            name: Default::default(),
             trap_ctx_ppn: Default::default(),
             state: Default::default(),
             syscall_times: [0; MAX_SYSCALL_NUM],
@@ -92,7 +94,6 @@ impl TaskInner {
 #[repr(C, align(4096))]
 pub struct Task {
     pub pid: PidHandle,
-    pub name: String,
     pub start_time_ms: usize,
     pub kernel_stack: KernelStack,
     inner: UPSafeCell<TaskInner>,
@@ -103,33 +104,31 @@ impl Task {
         let new_pid = alloc_pid();
         let task = Task {
             pid: new_pid.clone(),
-            name: name.to_owned(),
             start_time_ms: get_time_ms(),
             kernel_stack: alloc_kernel_stack(new_pid),
             inner: unsafe { UPSafeCell::new(TaskInner::default()) },
         };
-        let app_elf_vec = efs_get_app_elf(name).unwrap();
-        let elf = app_elf_vec.as_slice();
-        task.init(elf);
+
+        task.init(name);
         Arc::new(task)
     }
 
-    fn init(&self, elf_data: &[u8]) {
+    fn init(&self, name: &str) {
         let kernel_stack_top = self.kernel_stack.position().1;
-        let (ms, user_stack, entrypoint) = MemorySet::from_elf(elf_data);
+        let (ms, user_stack, entrypoint) = {
+            // todo: get_app error check?
+            let app_elf_vec = efs_get_app_elf(name).unwrap();
+            let elf = app_elf_vec.as_slice();
+            MemorySet::from_elf(elf)
+        };
 
-        log::debug!(
-            "init Task from app_id, &elf_data=0x{:x}, elf_data.len={}, &kernel_stack_top=0x{:x}",
-            elf_data.as_ptr() as usize,
-            elf_data.len(),
-            usize::from(kernel_stack_top)
-        );
         let trap_ctx_ppn = ms
             .translate(VirtAddr::from(TRAP_CONTEXT).into())
             .unwrap()
             .ppn();
 
         let mut inner = self.inner.exclusive_access();
+        inner.name = name.to_owned();
         inner.trap_ctx_ppn = trap_ctx_ppn;
         inner.addr_space = ms;
         inner.state = TaskState::Ready;
@@ -137,25 +136,20 @@ impl Task {
             .trap_context()
             .init(user_stack, entrypoint, kernel_stack_top)
     }
+
     pub fn exec(&self, name: &str) -> Result<(), ()> {
-        let app_elf_vec = efs_get_app_elf(name)?;
-        let elf = app_elf_vec.as_slice();
-        self.init(elf);
-        Ok(())
+        Ok(self.init(name))
     }
 
     pub fn spawn(name: &str) -> Result<Arc<Task>, ()> {
         let new_pid = alloc_pid();
         let task = Task {
             pid: new_pid.clone(),
-            name: name.to_owned(),
             start_time_ms: get_time_ms(),
             kernel_stack: alloc_kernel_stack(new_pid),
             inner: unsafe { UPSafeCell::new(TaskInner::default()) },
         };
-        let app_elf_vec = efs_get_app_elf(name)?;
-        let elf = app_elf_vec.as_slice();
-        task.init(elf);
+        task.init(name);
         Ok(Arc::new(task))
     }
 
@@ -170,7 +164,11 @@ impl Task {
 
 impl Display for Task {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_fmt(format_args!("task_{}, task_name={}", self.pid, self.name))
+        f.write_fmt(format_args!(
+            "task_{}, task_name={}",
+            self.pid,
+            self.inner.exclusive_access().name
+        ))
     }
 }
 
@@ -180,7 +178,6 @@ pub fn fork_task(parent: &Arc<Task>) -> Arc<Task> {
     // init child task
     let child_task = Arc::from(Task {
         pid: new_pid.clone(),
-        name: parent.name.clone(),
         start_time_ms: get_time_ms(),
         kernel_stack: alloc_kernel_stack(new_pid.clone()),
         inner: unsafe { UPSafeCell::new(TaskInner::default()) },
@@ -189,6 +186,7 @@ pub fn fork_task(parent: &Arc<Task>) -> Arc<Task> {
     let mut child_inner = child_task.inner_exclusive_access();
     // init basic
     {
+        child_inner.name = p_inner.name.clone();
         child_inner.syscall_times = [0; MAX_SYSCALL_NUM];
         child_inner.state = TaskState::Ready;
     }

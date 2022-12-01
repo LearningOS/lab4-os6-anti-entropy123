@@ -82,6 +82,10 @@ impl File for OSInode {
         }
         total_write_size
     }
+
+    fn inode(&self) -> Option<Arc<Inode>> {
+        Some(self.inner.exclusive_access().inode.clone())
+    }
 }
 
 bitflags! {
@@ -127,4 +131,12 @@ pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
             Arc::new(OSInode::new(readable, writable, inode))
         })
     }
+}
+
+pub fn link_at(newpath: &str, oldpath: &str) -> Result<(), ()> {
+    ROOT_INODE.link(&newpath, &oldpath)
+}
+
+pub fn unlink_at(path: &str) -> Result<(), ()> {
+    ROOT_INODE.unlink(path)
 }

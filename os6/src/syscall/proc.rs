@@ -54,12 +54,7 @@ pub fn sys_taskinfo(task: &Weak<Task>, user_info: usize) -> SyscallResult {
         syscall_times,
         exec_time: get_time_ms() - task.start_time_ms,
     };
-    log::debug!(
-        "task_{}({}) sys_taskinfo, copyout user_info={:?}",
-        task.pid,
-        task.name,
-        taskinfo
-    );
+    log::debug!("{}, sys_taskinfo, copyout user_info={:?}", task, taskinfo);
     Ok(0)
 }
 
@@ -153,9 +148,6 @@ pub fn sys_exec(task: &Weak<Task>, path: usize) -> SyscallResult {
     let path = from_user_cstring(&task, path);
     log::info!("sys_exec, {}, target app={}", task, path);
     task.exec(&path)?;
-    // drop(path);
-    // drop(task);
-    // restore(pop_cur_task().unwrap());
     Ok(0)
 }
 

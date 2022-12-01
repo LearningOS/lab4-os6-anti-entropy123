@@ -10,9 +10,8 @@ use super::SyscallResult;
 pub fn sys_mmap(task: &Weak<Task>, start: usize, len: usize, port: usize) -> SyscallResult {
     let task = Task::from_weak(&task);
     log::info!(
-        "task_{}({}) sys_mmap, receive args start=0x{:x}, end=0x{:x}, len=0x{:x}, port=0x{:x}",
-        task.pid,
-        task.name,
+        "{}, sys_mmap, receive args start=0x{:x}, end=0x{:x}, len=0x{:x}, port=0x{:x}",
+        task,
         start,
         start + len,
         len,
@@ -20,9 +19,8 @@ pub fn sys_mmap(task: &Weak<Task>, start: usize, len: usize, port: usize) -> Sys
     );
     if port & !0x7 != 0 {
         log::info!(
-            "task_{}({}) sys_mmap failed, receive bad port? port=0x{:x}",
-            task.pid,
-            task.name,
+            "{}, sys_mmap failed, receive bad port? port=0x{:x}",
+            task,
             port
         );
         return Err(());
@@ -36,9 +34,8 @@ pub fn sys_mmap(task: &Weak<Task>, start: usize, len: usize, port: usize) -> Sys
             1 => MapPermission::R,
             _ => {
                 log::info!(
-                    "task_{}({}) sys_mmap failed, receive meaningless port? port=0x{:x}",
-                    task.pid,
-                    task.name,
+                    "{}, sys_mmap failed, receive meaningless port? port=0x{:x}",
+                    task,
                     port
                 );
                 return Err(());
@@ -60,9 +57,8 @@ pub fn sys_mmap(task: &Weak<Task>, start: usize, len: usize, port: usize) -> Sys
 pub fn sys_unmmap(task: &Weak<Task>, start: usize, len: usize) -> SyscallResult {
     let task = Task::from_weak(&task);
     log::info!(
-        "task_{}({}) sys_unmmap, receive args start=0x{:x}, len=0x{:x}",
-        task.pid,
-        task.name,
+        "{} sys_unmmap, receive args start=0x{:x}, len=0x{:x}",
+        task,
         start,
         len
     );

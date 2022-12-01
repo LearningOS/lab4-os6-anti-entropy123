@@ -8,7 +8,7 @@ use alloc::{string::ToString, sync::Weak};
 pub use crate::syscall::proc::sys_exit;
 use crate::{
     syscall::{
-        fs::{sys_read, sys_write},
+        fs::{sys_close, sys_fstat, sys_link_at, sys_open_at, sys_read, sys_unlink_at, sys_write},
         mm::{sys_mmap, sys_unmmap},
         proc::{
             sys_exec, sys_fork, sys_getpid, sys_gettimeofday, sys_set_priority, sys_spawn,
@@ -20,27 +20,37 @@ use crate::{
 
 #[derive(Debug)]
 enum Syscall {
-    Read,
-    Write,
-    Exit,
-    Yield,
-    SetPriority,
-    GetTimeOfDay,
-    GetPid,
-    Munmap,
-    Fork,
-    Exec,
-    Mmap,
-    WaitPid,
-    Spawn,
-    TaskInfo,
+    UnLinkAt,     //35
+    LinkAt,       //37
+    OpenAt,       //56
+    Close,        //57
+    Read,         //63
+    Write,        //64
+    FStat,        //80
+    Exit,         //93
+    Yield,        //124
+    SetPriority,  //140
+    GetTimeOfDay, //169
+    GetPid,       //172
+    Munmap,       //215
+    Fork,         //220
+    Exec,         //221
+    Mmap,         //222
+    WaitPid,      //260
+    Spawn,        //400
+    TaskInfo,     //410
 }
 
 impl Syscall {
     fn from(n: usize) -> Result<Syscall, ()> {
         Ok(match n {
+            35 => Self::UnLinkAt,      // 0x23
+            37 => Self::LinkAt,        // 0x25
+            56 => Self::OpenAt,        // 0x38
+            57 => Self::Close,         // 0x39
             63 => Self::Read,          // 0x3f
             64 => Self::Write,         // 0x40
+            80 => Self::FStat,         // 0x50
             93 => Self::Exit,          // 0x5d
             124 => Self::Yield,        // 0x7c
             140 => Self::SetPriority,  // 0x8c
@@ -55,6 +65,7 @@ impl Syscall {
             410 => Self::TaskInfo,     // 0x19a
             _ => {
                 log::warn!("unsupported syscall: {}", n.to_string());
+                panic!("unsupported syscall");
                 return Err(());
             }
         })
@@ -80,8 +91,29 @@ impl Syscall {
             Syscall::SetPriority => sys_set_priority(task, arg1 as isize),
             Syscall::Exec => sys_exec(task, arg1),
             Syscall::Spawn => sys_spawn(task, arg1),
+            Syscall::UnLinkAt => sys_unlink_at(task, -100, arg2, 0),
+            Syscall::LinkAt => {
+                let (arg4, _) = {
+                    let task = Task::from_weak(task);
+                    let inner = task.inner_exclusive_access();
+                    let trapctx = inner.trap_context();
+                    (trapctx.reg_a(3), trapctx.reg_a(4))
+                };
+                sys_link_at(task, -100, arg2, -100 as i32, arg4, 0)
+            }
+            Syscall::FStat => sys_fstat(task, arg1 as i32, arg2),
+            Syscall::OpenAt => {
+                let arg4 = Task::from_weak(task)
+                    .inner_exclusive_access()
+                    .trap_context()
+                    .reg_a(3);
+
+                sys_open_at(task, arg1, arg2, arg3 as u32, arg4 as u32)
+            }
+            Syscall::Close => sys_close(task, arg1),
             // _ => todo!("unsupported syscall handle function, syscall={:?}", self),
         };
+
         let ret = ret.unwrap_or(-1);
         let task = Task::from_weak(&task);
         let a0 = {
@@ -90,6 +122,7 @@ impl Syscall {
             trap_ctx.set_reg_a(0, ret as usize);
             trap_ctx.reg_a(0)
         };
+
         log::info!(
             "task_{} syscall ret={:x}, task.trap_ctx.x[10]={:x}",
             task.pid,

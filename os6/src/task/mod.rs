@@ -20,7 +20,7 @@ pub use {
 // 将初始进程加入任务管理器.
 #[allow(dead_code)]
 pub fn add_initproc() {
-    TM.exclusive_access().add_task(Task::new("ch5b_initproc"))
+    TM.exclusive_access().add_task(Task::new("ch6b_initproc"))
 }
 
 pub fn add_task(task: Arc<Task>) {
@@ -50,12 +50,7 @@ pub fn run_task(task: Arc<Task>) -> ! {
 
 pub fn run_next_task() -> ! {
     let task = fetch_ready_task();
-
-    log::info!(
-        "will run next task, task_pid={}, task_name={}",
-        &task.pid,
-        &task.name
-    );
+    log::info!("will run next task, {}", task);
     run_task(task)
 }
 
